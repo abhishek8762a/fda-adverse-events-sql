@@ -67,9 +67,5 @@ FDA CFSAN Adverse Event Reporting System (CAERS) — publicly available.
 
 Link: https://www.fda.gov/food/compliance-enforcement-food/cfsan-adverse-event-reporting-system-caers
 
-Dataset not included in this repo due to file size. Download directly from FDA.
-
----
-
 **Abhishek Kumar**
 abhiyadav8762@gmail.com | github.com/abhishek8762a
