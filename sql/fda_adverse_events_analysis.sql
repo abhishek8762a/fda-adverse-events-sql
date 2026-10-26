@@ -126,25 +126,40 @@ LIMIT 10;
 -- --query 6
 -- Age Group wise adverse event distribution
 -- Goal: Which age group is most affected?
-SELECT 
-    CASE 
-        WHEN age_at_event BETWEEN '1' AND '17' THEN 'Child (1-17)'
-        WHEN age_at_event BETWEEN '18' AND '35' THEN 'Young Adult (18-35)'
-        WHEN age_at_event BETWEEN '36' AND '60' THEN 'Middle Age (36-60)'
-        WHEN age_at_event > '60' THEN 'Senior (60+)'
-        ELSE 'Unknown'
+-- age_at_event is stored as text, so it is converted to a number first
+-- (a text compare puts '5' after '17'). age_unit is used to turn months,
+-- weeks, days and decades into years, so infants count as children.
+SELECT
+    CASE
+        WHEN age_years IS NULL THEN 'Unknown'
+        WHEN age_years < 18    THEN 'Child (0-17)'
+        WHEN age_years <= 35   THEN 'Young Adult (18-35)'
+        WHEN age_years <= 60   THEN 'Middle Age (36-60)'
+        ELSE 'Senior (60+)'
     END AS age_group,
     COUNT(*) AS total_reports
-FROM adverse_events
+FROM (
+    SELECT
+        CASE
+            WHEN age_at_event NOT REGEXP '^[0-9]+(\\.[0-9]+)?$' THEN NULL
+            WHEN age_unit LIKE 'Year%'   THEN CAST(age_at_event AS DECIMAL(10,2))
+            WHEN age_unit LIKE 'Decade%' THEN CAST(age_at_event AS DECIMAL(10,2)) * 10
+            WHEN age_unit LIKE 'Month%'  THEN CAST(age_at_event AS DECIMAL(10,2)) / 12
+            WHEN age_unit LIKE 'Week%'   THEN CAST(age_at_event AS DECIMAL(10,2)) / 52
+            WHEN age_unit LIKE 'Day%'    THEN CAST(age_at_event AS DECIMAL(10,2)) / 365
+            ELSE NULL
+        END AS age_years
+    FROM adverse_events
+) AS ages
 GROUP BY age_group
 ORDER BY total_reports DESC;
 /*
  INSIGHT: Senior (60+) and Middle Age (36-60) are most affected
- with 20,889 and 20,310 reports respectively
- Likely reason: weaker immunity in seniors + higher supplement 
+ with 19,944 and 19,067 reports respectively
+ Likely reason: weaker immunity in seniors + higher supplement
  consumption in middle age group
- Children (2,104) least affected -- faster metabolism & recovery
-Unknown (37,874) highlights data quality issue in age reporting*/
+ Young Adults (18-35): 8,453 -- Children (0-17): 5,449, the least affected
+Unknown (37,873) highlights data quality issue in age reporting*/
 
 
 
@@ -156,9 +171,9 @@ SELECT
     brand_name,
     COUNT(*) AS serious_reports
 FROM adverse_events
-WHERE outcomes LIKE '%DEATH%' 
-   OR outcomes LIKE '%HOSPITALIZATION%'
-AND brand_name != 'Not Available'
+WHERE (outcomes LIKE '%DEATH%'
+    OR outcomes LIKE '%HOSPITALIZATION%')   -- brackets: AND runs before OR without them
+  AND brand_name != 'Not Available'
 GROUP BY brand_name
 HAVING COUNT(*) > 50
 ORDER BY serious_reports DESC
@@ -166,7 +181,7 @@ LIMIT 10;
 -- INSIGHT: REDACTED brand leads with 1,393 serious cases (identity protected)
 -- Super Beta Prostate (231) confirms seniors (60+) most vulnerable group
 -- Supplements dominate top 10 -- consistent finding across all queries
--- Hydroxycut presence validates data -- FDA banned it in 2009 for liver damage
+-- Hydroxycut presence validates data -- FDA warned consumers to stop using it in 2009 (liver damage)
 -- Raw Oysters only natural food in list -- bacterial contamination risk
 
 
