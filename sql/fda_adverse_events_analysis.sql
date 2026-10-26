@@ -17,6 +17,8 @@ CREATE TABLE adverse_events (
     outcomes VARCHAR(200),
     symptoms TEXT
 );
+-- The CSV is in data/ in this repo. Copy it into your MySQL secure_file_priv folder
+-- (shown by the first query above) and update this path if yours is different.
 LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/CAERS_ASCII_2004_2017Q2.csv'
 INTO TABLE adverse_events
 FIELDS TERMINATED BY ','
@@ -51,7 +53,7 @@ Insight: Helps identify high-risk sectors*/
 SELECT 
     gender,
     COUNT(*) AS total_reports,
-    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM adverse_events), 2) AS percentage    -- total percentage nikalna hai
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM adverse_events), 2) AS percentage    -- share of all reports (%)
 FROM adverse_events
 GROUP BY gender
 ORDER BY total_reports DESC;
@@ -64,7 +66,7 @@ vs Males at 29.68% -- nearly 2x more female reporters
  
  
  SELECT 
-    -- date se sirf year nikaal rahe hain
+    -- extract only the year from the date
     SUBSTRING(caers_created_date, -4, 4) AS report_year,
     COUNT(*) AS total_reports,
     CASE 
